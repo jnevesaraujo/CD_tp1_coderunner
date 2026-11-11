@@ -1,0 +1,30 @@
+// Contracts (a) and (b) - ManagerServer
+// Two separate services so RunServer and Client only depend on what they use.
+syntax = "proto3";
+
+option java_multiple_files = true;
+option java_package = "coderunner.manager";
+
+package manager;
+
+// (a) ManagerServer <-> RunServer
+service RegistrationService {
+  rpc register(ServerAddress) returns (RedisAddress);
+}
+
+// (b) ManagerServer <-> Client
+service LocatorService {
+  rpc getServer(Empty) returns (ServerAddress);
+}
+
+message ServerAddress {
+  string host = 1;   // IP reachable by clients (VM external/internal IP, never "localhost")
+  int32 port = 2;
+}
+
+message RedisAddress {
+  string host = 1;
+  int32 port = 2;    // e.g. 6000 if launched with -p 6000:6379
+}
+
+message Empty {}

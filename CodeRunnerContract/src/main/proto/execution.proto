@@ -1,0 +1,53 @@
+// Contract (c) - RunServer <-> Client
+syntax = "proto3";
+
+option java_multiple_files = true;
+option java_package = "coderunner.execution";
+
+package execution;
+
+service ExecutionService {
+  // Client streams the program (and optional stdin) in chunks.
+  // Server replies immediately with the request id (does NOT wait for execution).
+  rpc submit(stream SubmitChunk) returns (RequestId);
+
+  // Server streams back the status and, if available, stdout/stderr in chunks.
+  rpc getResult(RequestId) returns (stream ResultChunk);
+}
+
+message SubmitChunk {
+  oneof content {
+    bytes program = 1;   // bytes of prog.py
+    bytes input = 2;     // bytes of input.txt (optional)
+  }
+}
+
+message RequestId {
+  string id = 1;         // UUID
+}
+
+enum Status {
+  PENDENTE = 0;
+  EM_EXECUCAO = 1;       // optional, if you want a running state
+  CONCLUIDO = 2;
+  ERRO = 3;
+  TIMEOUT = 4;
+  DESCONHECIDO = 5;      // id not found in Redis
+}
+
+message ResultChunk {
+  oneof content {
+    StatusInfo status = 1;   // always the first message in the stream
+    bytes stdout = 2;        // out.txt, in chunks
+    bytes stderr = 3;        // err.txt, in chunks
+  }
+}
+
+message StatusInfo {
+  Status status = 1;
+  int32 exitCode = 2;
+  // Filled when the request ran on ANOTHER RunServer:
+  // the client should reconnect there to fetch the output.
+  string ownerHost = 3;
+  int32 ownerPort = 4;
+}
